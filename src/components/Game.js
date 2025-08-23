@@ -152,7 +152,7 @@ const Game = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, []); // Remove sliderPosition dependency  // Remove fallingLetters from dependencies to prevent re-rendering issues
+  }, [sliderPosition]); // Add sliderPosition dependency so slider redraws when moved
 
   // Handle keyboard controls
   useEffect(() => {
