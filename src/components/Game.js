@@ -6,6 +6,7 @@ const Game = () => {
   const [targetWord, setTargetWord] = useState('REACT');
   const [collectedLetters, setCollectedLetters] = useState([]);
   const [sliderPosition, setSliderPosition] = useState(300);
+  const [lives, setLives] = useState(3); // Add lives state
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const frameCountRef = useRef(0);
@@ -177,14 +178,24 @@ const Game = () => {
     };
   }, []);
 
-  // Check for word completion
+  // Check for word completion and life reduction
   useEffect(() => {
     const word = collectedLetters.join('');
+    // If any collected letter is not in the target word, reduce a life
+    if (collectedLetters.length > 0 && collectedLetters.some(l => !targetWord.includes(l))) {
+      setLives(prev => Math.max(0, prev - 1));
+      setCollectedLetters([]);
+      return;
+    }
     if (word === targetWord) {
       setScore(prev => prev + 100);
       setCollectedLetters([]);
       // Generate new target word
       setTargetWord('REACT'); // You can implement random word generation here
+    } else if (collectedLetters.length > targetWord.length) {
+      // Reduce life if collected letters exceed target word length
+      setLives(prev => Math.max(0, prev - 1));
+      setCollectedLetters([]);
     }
   }, [collectedLetters, targetWord]);
 
@@ -205,6 +216,7 @@ const Game = () => {
     <div className="game-container">
       <div className="game-info">
         <p>Score: {score}</p>
+        <p>Lives: {lives}</p>
         <p>Target Word: {targetWord}</p>
         <p>Collected Letters: {collectedLetters.join('')}</p>
       </div>
@@ -217,6 +229,22 @@ const Game = () => {
       <div className="game-controls">
         <p>Use ← → arrow keys or move mouse to control the slider</p>
       </div>
+      {lives === 0 && (
+        <div className="game-over-popup">
+          <div className="game-over-content">
+            <h2>Game Over</h2>
+            <p>Your score: {score}</p>
+            <button onClick={() => {
+              setScore(0);
+              setLives(3);
+              setCollectedLetters([]);
+              setTargetWord('REACT');
+            }}>
+              Restart
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

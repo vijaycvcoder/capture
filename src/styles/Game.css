@@ -27,6 +27,44 @@
   border-radius: 4px;
 }
 
+.game-over-popup {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.game-over-content {
+  background: #fff;
+  padding: 32px 40px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+}
+.game-over-content h2 {
+  margin-bottom: 16px;
+}
+.game-over-content button {
+  margin-top: 16px;
+  padding: 10px 24px;
+  font-size: 16px;
+  background: #2196F3;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.game-over-content button:hover {
+  background: #1769aa;
+}
+
 .game-info {
   position: relative;
   margin-bottom: 10px;
