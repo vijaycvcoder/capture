@@ -1,214 +1,222 @@
-import React, { useEffect, useRef, useState } from 'react';
-import words from 'an-array-of-english-words';
+import React, { useState, useEffect, useRef } from 'react';
 import '../styles/Game.css';
 
 const Game = () => {
-  // Canvas dimensions
-  const canvasWidth = 800;
-  const canvasHeight = 600;
-  
-  // Game state
   const [score, setScore] = useState(0);
-  const [currentWord, setCurrentWord] = useState('');
-  const [gameOver, setGameOver] = useState(false);
-  const [fallingLetters, setFallingLetters] = useState([]);
-  const [sliderPosition, setSliderPosition] = useState(canvasWidth / 2);
-  const [targetWord, setTargetWord] = useState('');
-  const [gameStarted, setGameStarted] = useState(false);
-  
-  // Refs
+  const [targetWord, setTargetWord] = useState('REACT');
+  const [collectedLetters, setCollectedLetters] = useState([]);
+  const [sliderPosition, setSliderPosition] = useState(300);
   const canvasRef = useRef(null);
-  const requestRef = useRef(null);
-  const lastLetterTimeRef = useRef(0);
-  
-  // Constants
-  const sliderWidth = 100;
-  const sliderHeight = 20;
-  const letterSize = 40;
-  const letterSpeed = 2;
-  
-  // Handle keyboard input
-  const handleKeyDown = (e) => {
-    if (e.key === 'ArrowLeft') {
-      setSliderPosition(prev => Math.max(sliderWidth / 2, prev - 20));
-    } else if (e.key === 'ArrowRight') {
-      setSliderPosition(prev => Math.min(canvasWidth - sliderWidth / 2, prev + 20));
-    }
-  };
-  
-  // Check if current word is valid
-  const checkWord = () => {
-    if (words.includes(currentWord.toLowerCase())) {
-      setScore(prev => prev + currentWord.length * 5);
-      
-      // Check if current word matches target word
-      if (currentWord === targetWord) {
-        setScore(prev => prev + targetWord.length * 10);
-        
-        // Set a new target word
-        const filteredWords = words.filter(word => word.length >= 4 && word.length <= 8);
-        const randomWord = filteredWords[Math.floor(Math.random() * filteredWords.length)];
-        setTargetWord(randomWord.toUpperCase());
-      }
-      
-      // Clear current word after checking
-      setCurrentWord('');
-    } else {
-      alert('Not a valid word!');
-    }
-  };
-  
-  // Start the game
-  const startGame = () => {
-    setGameStarted(true);
-    
-    // Generate initial falling letters (A-Z)
-    const initialLetters = [];
-    for (let i = 0; i < 10; i++) {
-      initialLetters.push({
-        char: String.fromCharCode(65 + Math.floor(Math.random() * 26)),
-        x: Math.random() * (canvasWidth - letterSize),
-        y: -100 - Math.random() * 500, // Start above the canvas at different heights
-        speed: letterSpeed + Math.random() * 1
-      });
-    }
-    
-    setFallingLetters(initialLetters);
-    requestRef.current = requestAnimationFrame(animate);
-  };
-  
-  // Game animation loop
-  const animate = (time) => {
-    if (!canvasRef.current) return;
-    
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    
-    // Add new falling letter every 1.5 seconds
-    if (!lastLetterTimeRef.current || time - lastLetterTimeRef.current > 1500) {
-      const newLetter = {
-        char: String.fromCharCode(65 + Math.floor(Math.random() * 26)),
-        x: Math.random() * (canvasWidth - letterSize),
-        y: 0,
-        speed: letterSpeed + Math.random() * 1
-      };
-      
-      setFallingLetters(prev => [...prev, newLetter]);
-      lastLetterTimeRef.current = time;
-    }
-    
-    // Update and draw falling letters
-    const updatedLetters = [];
-    
-    fallingLetters.forEach(letter => {
-      // Update position
-      const updatedLetter = {
-        ...letter,
-        y: letter.y + letter.speed
-      };
-      
-      // Check if letter is caught by slider
-      if (
-        updatedLetter.y + letterSize >= canvasHeight - sliderHeight &&
-        updatedLetter.y <= canvasHeight &&
-        updatedLetter.x + letterSize >= sliderPosition - sliderWidth / 2 &&
-        updatedLetter.x <= sliderPosition + sliderWidth / 2
-      ) {
-        // Letter caught
-        setCurrentWord(word => word + letter.char);
-        setScore(prev => prev + 10);
-      } 
-      // Keep letter if it's still on screen
-      else if (updatedLetter.y < canvasHeight) {
-        updatedLetters.push(updatedLetter);
-        
-        // Draw the letter
-        ctx.fillStyle = '#4CAF50';
-        ctx.fillRect(updatedLetter.x, updatedLetter.y, letterSize, letterSize);
-        ctx.fillStyle = 'white';
-        ctx.font = '24px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(updatedLetter.char, updatedLetter.x + letterSize/2, updatedLetter.y + letterSize/2);
-      }
-    });
-    
-    // Update falling letters state
-    setFallingLetters(updatedLetters);
-    
-    // Draw slider
-    ctx.fillStyle = '#2196F3';
-    ctx.fillRect(sliderPosition - sliderWidth / 2, canvasHeight - sliderHeight, sliderWidth, sliderHeight);
-    
-    requestRef.current = requestAnimationFrame(animate);
-  };
-  
-  // Initialize the game
+  const animationRef = useRef(null);
+  const frameCountRef = useRef(0);
+  const lettersRef = useRef([]);
+  const sliderSpeed = 10; // Pixels to move per keypress // Store letters in a ref instead of state
+
+  // Initialize falling letters
   useEffect(() => {
-    // Set a random target word from the dictionary (4-8 letters)
-    const filteredWords = words.filter(word => word.length >= 4 && word.length <= 8);
-    const randomWord = filteredWords[Math.floor(Math.random() * filteredWords.length)];
-    setTargetWord(randomWord.toUpperCase());
-    
-    // Set up keyboard controls
-    window.addEventListener('keydown', handleKeyDown);
-    
-    // Cleanup function
+    // Initial letters will be created in the game loop
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      cancelAnimationFrame(requestRef.current);
+      lettersRef.current = []; // Clean up letters on unmount
     };
   }, []);
-  
+
+  // Game loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for better performance
+    
+    // Set fixed canvas size
+    canvas.width = 600;  // Fixed width
+    canvas.height = 400; // Fixed height
+    
+    // Enable image smoothing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let lastTime = 0;
+    let frameDelay = 16; // Approximately 60 FPS
+
+    const addNewLetter = () => {
+      if (lettersRef.current.length < 5) {
+        lettersRef.current.push({
+          char: letters[Math.floor(Math.random() * letters.length)],
+          x: 50 + Math.random() * (canvas.width - 100), // Keep letters away from edges
+          y: -20,
+          speed: 1.5, // Slightly faster speed
+          id: Math.random()
+        });
+      }
+    };
+    
+    // Add initial letters if none exist
+    if (lettersRef.current.length === 0) {
+      addNewLetter();
+      addNewLetter();
+    }
+    
+    const animate = (timestamp) => {
+      if (timestamp - lastTime < frameDelay) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      lastTime = timestamp;
+      frameCountRef.current += 1;
+      
+      // Add new letter every 60 frames (about 1 second)
+      if (frameCountRef.current % 60 === 0) {
+        addNewLetter();
+      }
+
+      // Clear with background color instead of clearRect
+      ctx.fillStyle = '#f8f8f8';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Update and draw letters
+      const updatedLetters = [];
+      
+      // Pre-render letters
+      ctx.font = 'bold 28px Arial';
+      
+      for (const letter of lettersRef.current) {
+        // Update position
+        const newY = letter.y + 2;
+        
+        // Check collision with slider
+        if (newY > canvas.height - 50 && 
+            newY < canvas.height - 30 &&
+            letter.x > sliderPosition - 50 && 
+            letter.x < sliderPosition + 50) {
+          setCollectedLetters(prev => [...prev, letter.char]);
+          continue;
+        }
+        
+        // Remove letters that fall off screen
+        if (newY > canvas.height) continue;
+        
+        // Draw letter background with slight transparency
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(letter.x - 2, letter.y - 24, 30, 34);
+        
+        // Draw letter border
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(letter.x - 2, letter.y - 24, 30, 34);
+        
+        // Draw letter
+        ctx.fillStyle = '#000';
+        ctx.fillText(letter.char, letter.x, letter.y);
+        
+        // Keep letter for next frame
+        updatedLetters.push({
+          ...letter,
+          y: newY
+        });
+      }
+      
+      // Update letters in ref
+      lettersRef.current = updatedLetters;
+
+      // Draw slider with anti-aliasing
+      const sliderWidth = 100;
+      const sliderHeight = 20;
+      const sliderY = canvas.height - 40;
+      
+      // Draw slider shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(sliderPosition - sliderWidth/2 + 2, sliderY + 2, sliderWidth, sliderHeight);
+      
+      // Draw slider body
+      ctx.fillStyle = '#2196F3';
+      ctx.fillRect(sliderPosition - sliderWidth/2, sliderY, sliderWidth, sliderHeight);
+      
+      // Draw slider border
+      ctx.strokeStyle = '#1976D2';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sliderPosition - sliderWidth/2, sliderY, sliderWidth, sliderHeight);
+      
+      // Draw slider highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.fillRect(sliderPosition - sliderWidth/2, sliderY, sliderWidth, sliderHeight/2);
+
+      // Schedule next frame
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    // Start animation
+    animate(0);
+
+    // Cleanup
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []); // Remove sliderPosition dependency  // Remove fallingLetters from dependencies to prevent re-rendering issues
+
+  // Handle keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      e.preventDefault(); // Prevent default arrow key scrolling
+      
+      switch (e.key) {
+        case 'ArrowLeft':
+          setSliderPosition(prev => Math.max(50, prev - sliderSpeed));
+          break;
+        case 'ArrowRight':
+          setSliderPosition(prev => Math.min(550, prev + sliderSpeed));
+          break;
+      }
+    };
+
+    // Handle both keydown and keyup events
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // Check for word completion
+  useEffect(() => {
+    const word = collectedLetters.join('');
+    if (word === targetWord) {
+      setScore(prev => prev + 100);
+      setCollectedLetters([]);
+      // Generate new target word
+      setTargetWord('REACT'); // You can implement random word generation here
+    }
+  }, [collectedLetters, targetWord]);
+
+  // Handle mouse/touch movement
+  const handleMouseMove = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    setSliderPosition(prev => {
+      const newPos = Math.max(50, Math.min(550, x));
+      return newPos;
+    });
+  };
+
   return (
     <div className="game-container">
       <div className="game-info">
-        <div className="score">Score: {score}</div>
-        <div className="target-word">Target Word: {targetWord}</div>
-        <div className="current-word">Current Word: {currentWord}</div>
+        <p>Score: {score}</p>
+        <p>Target Word: {targetWord}</p>
+        <p>Collected Letters: {collectedLetters.join('')}</p>
       </div>
-      
-      {!gameStarted ? (
-        <div className="start-screen">
-          <h2>Word Finder Game</h2>
-          <p>Catch falling letters to form words!</p>
-          <button 
-            onClick={startGame} 
-            className="start-game-button"
-          >
-            Start Game
-          </button>
-        </div>
-      ) : (
-        <>
-          <canvas
-            ref={canvasRef}
-            width={canvasWidth}
-            height={canvasHeight}
-            className="game-canvas"
-          />
-          
-          <div className="game-controls">
-            <button onClick={checkWord} className="check-button">
-              Check Word
-            </button>
-            <button 
-              onClick={() => setCurrentWord('')} 
-              className="clear-button"
-            >
-              Clear Word
-            </button>
-          </div>
-        </>
-      )}
-      
-      {gameOver && (
-        <div className="game-over">
-          <h2>Game Over!</h2>
-          <p>Final Score: {score}</p>
-          <button onClick={() => window.location.reload()}>Play Again</button>
-        </div>
-      )}
+      <canvas 
+        ref={canvasRef} 
+        className="game-canvas"
+        onMouseMove={handleMouseMove}
+        style={{ cursor: 'none' }} // Hide cursor over canvas
+      />
+      <div className="game-controls">
+        <p>Use ← → arrow keys or move mouse to control the slider</p>
+      </div>
     </div>
   );
 };
