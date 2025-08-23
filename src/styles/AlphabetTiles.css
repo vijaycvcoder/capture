@@ -1,0 +1,30 @@
+.alphabet-tiles-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.alphabet-tile {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 60px;
+  background-color: #4CAF50;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.alphabet-tile:hover {
+  transform: translateY(-5px);
+  background-color: #45a049;
+}
