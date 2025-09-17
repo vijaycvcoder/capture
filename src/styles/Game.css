@@ -1,10 +1,19 @@
+.game-wrapper {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  justify-content: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .game-container {
   position: relative;
   width: 96vw;
   max-width: 600px;
   min-width: 280px;
   height: auto;
-  margin: 10px auto;
   padding: 2vw 2vw 0 2vw;
   font-family: Arial, sans-serif;
   background-color: #ffffff;
@@ -13,6 +22,194 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.words-sidebar {
+  width: 200px;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.words-sidebar h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+.hint-section {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.hint-button {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s ease;
+}
+
+.hint-button:hover {
+  background: #1976D2;
+}
+
+.hint-text {
+  margin: 10px 0;
+  padding: 8px;
+  background: #e3f2fd;
+  border-radius: 4px;
+  color: #1976D2;
+  font-size: 14px;
+}
+
+.words-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.word-item {
+  position: relative;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.word-item.hidden {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+}
+
+.word-item.discovered {
+  background: #e3f2fd;
+  border: 2px solid #90caf9;
+  transform: translateX(5px);
+}
+
+.current-word-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.word-content {
+  font-size: 28px;
+  letter-spacing: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.word-content span {
+  display: inline-block;
+  min-width: 20px;
+  transition: all 0.3s ease;
+}
+
+.word-content span.revealed {
+  color: #1976d2;
+  transform: scale(1.1);
+  text-shadow: 0 0 8px rgba(25, 118, 210, 0.3);
+}
+
+.word-item.hidden .word-content {
+  color: #495057;
+}
+
+.word-item.discovered .word-content {
+  color: #1976d2;
+}
+
+.word-info {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.word-length, .word-hint {
+  color: #6c757d;
+  background: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  font-size: 11px;
+}
+
+.word-hint {
+  color: #1976d2;
+  border-color: #90caf9;
+  background: #e3f2fd;
+}
+
+.current-letters {
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  letter-spacing: 4px;
+  color: #1976d2;
+  font-weight: bold;
+  text-align: center;
+  min-height: 36px;
+  margin: 0;
+}
+
+.game-summary {
+  margin-top: 20px;
+  padding: 15px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.game-summary p {
+  margin: 5px 0;
+  color: #1976d2;
+  font-weight: bold;
+}
+
+.word-complete-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #4caf50;
+  color: white;
+  padding: 15px 30px;
+  border-radius: 25px;
+  font-size: 24px;
+  font-weight: bold;
+  animation: messagePopup 2s ease-in-out forwards;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+@keyframes messagePopup {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -80px);
+  }
 }
 
 .game-controls {
@@ -98,22 +295,48 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   touch-action: none;
 }
-@media (max-width: 700px) {
+@media (max-width: 900px) {
+  .game-wrapper {
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+  }
+
   .game-container {
     padding: 1vw 0.5vw 0 0.5vw;
     min-width: 0;
     width: 99vw;
     box-shadow: 0 0 10px rgba(0,0,0,0.08);
   }
+
+  .words-sidebar {
+    width: 96vw;
+    max-width: 600px;
+    margin-top: 20px;
+  }
+
+  .words-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+  }
+
   .game-info {
     font-size: 13px;
     padding: 6px;
   }
+
   .game-canvas {
     border-width: 1.5px;
   }
+
   .game-over-content {
     padding: 18px 8px;
+  }
+
+  .word-item {
+    padding: 6px 8px;
+    font-size: 12px;
   }
 }
 

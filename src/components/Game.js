@@ -1,12 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import '../styles/Game.css';
+import words from 'an-array-of-english-words';
+
+// Filter words that are suitable for the game (4-6 letters, no special characters)
+const getRandomWords = (count = 15) => {
+  const filteredWords = words.filter(word => {
+    return word.length >= 4 && 
+           word.length <= 6 && 
+           /^[A-Za-z]+$/.test(word) &&
+           !word.includes("'") &&
+           !word.includes("-");
+  });
+
+  const randomWords = new Set();
+  while (randomWords.size < count) {
+    const randomWord = filteredWords[Math.floor(Math.random() * filteredWords.length)];
+    randomWords.add(randomWord.toUpperCase());
+  }
+  
+  const selectedWords = Array.from(randomWords);
+  console.log('Random Words Generated:', selectedWords);
+  return selectedWords;
+};
 
 const Game = () => {
+  // Generate random words only once when component mounts
+  const gameWords = useMemo(() => {
+    const words = getRandomWords(15);
+    console.log('🎯 Current Word to Find:', words[0]);
+    return words;
+  }, []);
+  
   const [score, setScore] = useState(0);
-  const [targetWord, setTargetWord] = useState('REACT');
+  const [targetWord, setTargetWord] = useState(() => {
+    console.log('🎮 Starting Game with Word:', gameWords[0]);
+    return gameWords[0];
+  });
   const [collectedLetters, setCollectedLetters] = useState([]);
   const [sliderPosition, setSliderPosition] = useState(300);
-  const [lives, setLives] = useState(3); // Add lives state
+  const [lives, setLives] = useState(3);
+  const [discoveredWords, setDiscoveredWords] = useState([]);
+  const [hiddenWords, setHiddenWords] = useState(gameWords);
+  const [revealedIndices, setRevealedIndices] = useState([]);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const frameCountRef = useRef(0);
@@ -159,23 +195,71 @@ const Game = () => {
   // Check for word completion and life reduction
   useEffect(() => {
     const word = collectedLetters.join('');
+    
     // If any collected letter is not in the target word, reduce a life
     if (collectedLetters.length > 0 && collectedLetters.some(l => !targetWord.includes(l))) {
       setLives(prev => Math.max(0, prev - 1));
       setCollectedLetters([]);
       return;
     }
+
+    // Reveal letter if it's in the target word
+    collectedLetters.forEach(letter => {
+      targetWord.split('').forEach((targetLetter, index) => {
+        if (letter === targetLetter && !revealedIndices.includes(index)) {
+          setRevealedIndices(prev => [...prev, index]);
+          // Add points for each correct letter
+          setScore(prev => prev + 10);
+        }
+      });
+    });
+
+    // Check if the word matches the target word
     if (word === targetWord) {
-      setScore(prev => prev + 100);
+      console.log('Word Found!', {
+        word: targetWord,
+        wordNumber: currentWordIndex + 1,
+        totalWords: gameWords.length
+      });
+      
+      // Bonus points for completing the word
+      const wordBonus = 50 + (targetWord.length * 20);
+      setScore(prev => prev + wordBonus);
+      setDiscoveredWords(prev => [...prev, word]);
       setCollectedLetters([]);
-      // Generate new target word
-      setTargetWord('REACT'); // You can implement random word generation here
+      setRevealedIndices([]);
+      
+      // Show completion message
+      const wordCompleteMessage = document.createElement('div');
+      wordCompleteMessage.className = 'word-complete-message';
+      wordCompleteMessage.textContent = `+${wordBonus} points! Next word...`;
+      document.body.appendChild(wordCompleteMessage);
+      setTimeout(() => wordCompleteMessage.remove(), 2000);
+      
+      // Move to next word after a short delay
+      setTimeout(() => {
+        const nextIndex = currentWordIndex + 1;
+        if (nextIndex < gameWords.length) {
+          console.log('🎯 Next Word to Find:', gameWords[nextIndex]);
+          console.log('📊 Game Progress:', {
+            wordNumber: nextIndex + 1,
+            totalWords: gameWords.length,
+            remainingWords: gameWords.length - nextIndex - 1
+          });
+          setCurrentWordIndex(nextIndex);
+          setTargetWord(gameWords[nextIndex]);
+        } else {
+          console.log('Game completed! All words found!');
+          // Game won - all words discovered
+          setLives(0);
+        }
+      }, 1000);
     } else if (collectedLetters.length > targetWord.length) {
       // Reduce life if collected letters exceed target word length
       setLives(prev => Math.max(0, prev - 1));
       setCollectedLetters([]);
     }
-  }, [collectedLetters, targetWord]);
+  }, [collectedLetters, targetWord, currentWordIndex, gameWords.length, revealedIndices]);
 
 
   // Handle mouse movement
@@ -208,22 +292,47 @@ const Game = () => {
   };
 
   return (
-    <div className="game-container">
-      <div className="game-info">
-        <p>Score: {score}</p>
-        <p>Lives: {lives}</p>
-        <p>Target Word: {targetWord}</p>
-        <p>Collected Letters: {collectedLetters.join('')}</p>
+    <div className="game-wrapper">
+      <div className="game-container">
+        <div className="game-info">
+          <p>Score: {score}</p>
+          <p>Lives: {lives}</p>
+          <p className="current-letters">{collectedLetters.join('')}</p>
+        </div>
+        <canvas 
+          ref={canvasRef} 
+          className="game-canvas"
+          onMouseMove={handleMouseMove}
+          onTouchMove={handleTouchMove}
+          style={{ cursor: 'none', touchAction: 'none' }}
+        />
+        <div className="game-controls">
+          <p>Use ← → arrow keys or move mouse to control the slider</p>
+        </div>
       </div>
-      <canvas 
-        ref={canvasRef} 
-        className="game-canvas"
-        onMouseMove={handleMouseMove}
-        onTouchMove={handleTouchMove}
-        style={{ cursor: 'none', touchAction: 'none' }}
-      />
-      <div className="game-controls">
-        <p>Use ← → arrow keys or move mouse to control the slider</p>
+      <div className="words-sidebar">
+        <h3>Progress: {discoveredWords.length}/{gameWords.length}</h3>
+        <div className="current-word-container">
+          <div className={`word-item ${discoveredWords.includes(targetWord) ? 'discovered' : 'hidden'}`}>
+            <div className="word-content">
+              {targetWord.split('').map((letter, index) => (
+                <span key={index} className={revealedIndices.includes(index) ? 'revealed' : ''}>
+                  {revealedIndices.includes(index) || discoveredWords.includes(targetWord) ? letter : '•'}
+                </span>
+              ))}
+            </div>
+            <div className="word-info">
+              <span className="word-length">{targetWord.length} letters</span>
+              <span className="word-hint">Current Word</span>
+            </div>
+          </div>
+        </div>
+        {!lives && (
+          <div className="game-summary">
+            <p>Words Found: {discoveredWords.length}</p>
+            <p>Total Score: {score}</p>
+          </div>
+        )}
       </div>
       {lives === 0 && (
         <div className="game-over-popup">
